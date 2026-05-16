@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snak.oi</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --bg:#0a0a0f; --surface:#12121a; --card:#1a1a26; --border:#2a2a3e;
+      --accent:#00ff88; --accent2:#7c3aed; --danger:#ff4444;
+      --warn:#ffaa00; --info:#00aaff; --discord:#5865F2;
+      --text:#e0e0f0; --muted:#6060a0;
+    }
+    body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; min-height:100vh; display:flex; flex-direction:column; align-items:center; }
+    h1 { font-size:2.5rem; font-weight:900; background:linear-gradient(90deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; letter-spacing:-1px; }
+    .screen { display:none; width:100%; max-width:900px; padding:20px; }
+    .screen.active { display:block; }
+
+    /* AUTH */
+    #auth-screen { display:none; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; gap:24px; }
+    #auth-screen.active { display:flex; }
+    .auth-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:36px; width:100%; max-width:380px; display:flex; flex-direction:column; gap:14px; }
+    .auth-card h2 { font-size:1.4rem; text-align:center; }
+    input { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:10px 14px; font-size:1rem; width:100%; outline:none; transition:border-color .2s; }
+    input:focus { border-color:var(--accent); }
+    button { cursor:pointer; border:none; border-radius:8px; padding:11px 22px; font-size:1rem; font-weight:600; transition:opacity .15s,transform .1s; }
+    button:hover { opacity:.88; }
+    button:active { transform:scale(.97); }
+    .btn-primary { background:var(--accent); color:#000; }
+    .btn-ghost { background:transparent; border:1px solid var(--border); color:var(--text); }
+    .btn-discord { background:var(--discord); color:#fff; display:flex; align-items:center; gap:8px; justify-content:center; width:100%; border:none; }
+    .auth-toggle { text-align:center; color:var(--muted); font-size:.9rem; }
+    .auth-toggle span { color:var(--accent); cursor:pointer; text-decoration:underline; }
+    .error-msg { color:var(--danger); font-size:.85rem; text-align:center; min-height:18px; }
+
+    /* MENU */
+    #menu-screen { display:none; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; gap:24px; }
+    #menu-screen.active { display:flex; }
+    .menu-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:28px; width:100%; max-width:540px; display:flex; flex-direction:column; gap:14px; }
+    .user-badge { display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 16px; font-size:.95rem; flex-wrap:wrap; gap:8px; }
+    .user-badge strong { color:var(--accent); }
+    .section-title { font-size:.72rem; text-transform:uppercase; letter-spacing:2px; color:var(--muted); }
+
+    /* MODE GRID */
+    .mode-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .mode-btn { background:var(--surface); border:2px solid var(--border); border-radius:10px; padding:10px 12px; text-align:left; cursor:pointer; transition:all .2s; color:var(--text); }
+    .mode-btn:hover { border-color:var(--muted); }
+    .mode-btn.selected { border-color:var(--accent); background:rgba(0,255,136,.07); }
+    .mode-btn .mode-icon { font-size:1.2rem; }
+    .mode-btn .mode-name { font-weight:700; font-size:.9rem; color:var(--accent); display:block; margin-top:2px; }
+    .mode-btn .mode-desc { color:var(--muted); font-size:.75rem; margin-top:2px; display:block; }
+
+    /* SKIN GRID */
+    .skin-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .skin-btn { width:42px; height:42px; border-radius:8px; border:2px solid var(--border); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.1rem; transition:all .2s; background:var(--surface); position:relative; }
+    .skin-btn.selected { border-color:var(--accent); box-shadow:0 0 10px rgba(0,255,136,.35); }
+    .skin-btn.locked { opacity:.35; cursor:not-allowed; filter:grayscale(1); }
+    .skin-btn .lock-icon { position:absolute; bottom:2px; right:3px; font-size:.6rem; }
+    .skin-hint { font-size:.72rem; color:var(--muted); }
+
+    /* LEADERBOARD */
+    .leaderboard-table { width:100%; border-collapse:collapse; font-size:.88rem; }
+    .leaderboard-table th { text-align:left; color:var(--muted); padding:6px 8px; border-bottom:1px solid var(--border); }
+    .leaderboard-table td { padding:7px 8px; }
+    .leaderboard-table tr:hover td { background:var(--surface); }
+    .leaderboard-table .me { color:var(--accent); font-weight:700; }
+
+    /* GAME */
+    #game-screen { display:none; flex-direction:column; align-items:center; padding:10px; }
+    #game-screen.active { display:flex; }
+    .game-header { display:flex; align-items:center; justify-content:space-between; width:100%; max-width:620px; padding:8px 0 10px; gap:8px; flex-wrap:wrap; }
+    .score-display { display:flex; gap:8px; }
+    .score-box { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:6px 14px; text-align:center; }
+    .score-box .label { font-size:.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+    .score-box .value { font-size:1.35rem; font-weight:800; color:var(--accent); }
+    .score-box.timer .value { color:var(--warn); }
+    canvas { border:2px solid var(--border); border-radius:12px; background:#080810; display:block; image-rendering:pixelated; }
+    .controls-hint { margin-top:8px; color:var(--muted); font-size:.78rem; text-align:center; }
+
+    /* POWER-UP HUD */
+    .powerup-hud { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; justify-content:center; min-height:34px; }
+    .pw-pill { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:4px 12px; font-size:.78rem; display:flex; align-items:center; gap:6px; }
+    .pw-pill.speed { border-color:var(--warn); color:var(--warn); }
+    .pw-pill.shield { border-color:var(--info); color:var(--info); }
+    .pw-pill.multi { border-color:#ff44ff; color:#ff44ff; }
+    .pw-pill .pw-bar { height:4px; background:var(--border); border-radius:2px; width:44px; overflow:hidden; }
+    .pw-bar-fill { height:100%; border-radius:2px; }
+    .pw-pill.speed .pw-bar-fill { background:var(--warn); }
+    .pw-pill.shield .pw-bar-fill { background:var(--info); }
+    .pw-pill.multi .pw-bar-fill { background:#ff44ff; }
+
+    /* SHRINK WARNING */
+    .shrink-warn { font-size:.78rem; color:var(--danger); text-align:center; margin-top:4px; min-height:16px; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .shrink-warn.active { animation:pulse 1s infinite; }
+
+    /* GAME OVER */
+    #gameover-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.78); z-index:100; align-items:center; justify-content:center; }
+    #gameover-overlay.active { display:flex; }
+    .gameover-card { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:36px; text-align:center; display:flex; flex-direction:column; gap:14px; max-width:360px; width:90%; }
+    .gameover-card h2 { font-size:2rem; color:var(--danger); }
+    .gameover-score { font-size:1.1rem; color:var(--muted); }
+    .gameover-score strong { color:var(--accent); font-size:2rem; }
+    .gameover-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+
+    /* TOAST */
+    #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--card); border:1px solid var(--border); padding:12px 22px; border-radius:10px; font-size:.9rem; transition:transform .3s ease; z-index:200; pointer-events:none; }
+    #toast.show { transform:translateX(-50%) translateY(0); }
+    #toast.success { border-color:var(--accent); color:var(--accent); }
+    #toast.error { border-color:var(--danger); color:var(--danger); }
+    #toast.info { border-color:var(--info); color:var(--info); }
+
+    .spinner { display:inline-block; width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; margin-right:6px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    hr { border:none; border-top:1px solid var(--border); }
+
+    /* MOBILE DPAD */
+    .mobile-dpad { display:none; margin-top:14px; flex-direction:column; align-items:center; gap:4px; }
+    .dpad-row { display:flex; gap:4px; }
+    .dpad-btn { width:54px; height:54px; background:var(--card); border:1px solid var(--border); border-radius:10px; font-size:1.3rem; display:flex; align-items:center; justify-content:center; user-select:none; cursor:pointer; }
+    @media(max-width:600px) { .mobile-dpad{display:flex} canvas{max-width:95vw;max-height:95vw} .mode-grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen" class="screen">
+  <h1>🐍 Snak.oi</h1>
+  <div class="auth-card">
+    <h2 id="auth-title">Sign In</h2>
+    <input id="auth-username" type="text" placeholder="Username" maxlength="20" autocomplete="username"/>
+    <input id="auth-password" type="password" placeholder="Password" autocomplete="current-password"/>
+    <p id="auth-error" class="error-msg"></p>
+    <button class="btn-primary" id="auth-submit-btn" onclick="authSubmit()">Sign In</button>
+    <div class="auth-toggle" id="auth-toggle">No account? <span onclick="toggleAuthMode()">Create one</span></div>
+    <hr/>
+    <a href="https://discord.gg/SKWFHpSFzW" target="_blank" rel="noopener" style="text-decoration:none">
+      <button class="btn-discord">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:20px;height:20px;fill:#fff;flex-shrink:0"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+        Join our Discord
+      </button>
+    </a>
+  </div>
+</div>
+
+<!-- MENU -->
+<div id="menu-screen" class="screen">
+  <h1>🐍 Snak.oi</h1>
+  <div class="menu-card">
+    <div class="user-badge">
+      <span>👤 <strong id="menu-username"></strong></span>
+      <span style="color:var(--muted);font-size:.85rem">Best: <strong id="menu-best" style="color:var(--accent)">0</strong></span>
+      <button class="btn-ghost" style="padding:6px 12px;font-size:.8rem" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="section-title">🎮 Game Mode</div>
+    <div class="mode-grid">
+      <div class="mode-btn selected" onclick="selectMode('classic')" id="mode-classic">
+        <span class="mode-icon">🐍</span>
+        <span class="mode-name">Classic</span>
+        <span class="mode-desc">Hit a wall and it's over</span>
+      </div>
+      <div class="mode-btn" onclick="selectMode('wraparound')" id="mode-wraparound">
+        <span class="mode-icon">🌀</span>
+        <span class="mode-name">No Walls</span>
+        <span class="mode-desc">Wrap through walls, avoid yourself</span>
+      </div>
+      <div class="mode-btn" onclick="selectMode('timeattack')" id="mode-timeattack">
+        <span class="mode-icon">⏱️</span>
+        <span class="mode-name">Time Attack</span>
+        <span class="mode-desc">60 seconds — score as high as you can</span>
+      </div>
+      <div class="mode-btn" onclick="selectMode('shrinking')" id="mode-shrinking">
+        <span class="mode-icon">📦</span>
+        <span class="mode-name">Shrinking</span>
+        <span class="mode-desc">Arena shrinks every 10 seconds!</span>
+      </div>
+    </div>
+
+    <div class="section-title">🎨 Snak Skin</div>
+    <div class="skin-row" id="skin-selector"></div>
+    <div class="skin-hint" id="skin-hint"></div>
+
+    <button class="btn-primary" style="width:100%;padding:14px;font-size:1.1rem" onclick="startGame()">▶ Play</button>
+
+    <div class="section-title">🏆 Leaderboard</div>
+    <div id="leaderboard-container"><div style="text-align:center;color:var(--muted);padding:16px"><span class="spinner"></span>Loading...</div></div>
+
+    <div style="display:flex;gap:8px">
+      <button class="btn-ghost" style="font-size:.85rem;flex:1" onclick="loadLeaderboard()">↻ Refresh</button>
+      <a href="https://discord.gg/SKWFHpSFzW" target="_blank" rel="noopener" style="flex:1;text-decoration:none">
+        <button class="btn-discord" style="padding:10px;font-size:.88rem">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;fill:#fff;flex-shrink:0"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+          Join Discord
+        </button>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game-screen" class="screen">
+  <div class="game-header">
+    <button class="btn-ghost" style="padding:8px 14px" onclick="exitToMenu()">← Menu</button>
+    <div class="score-display">
+      <div class="score-box"><div class="label">Score</div><div class="value" id="hud-score">0</div></div>
+      <div class="score-box"><div class="label">Best</div><div class="value" id="hud-best">0</div></div>
+      <div class="score-box timer" id="hud-timer-box" style="display:none"><div class="label">Time</div><div class="value" id="hud-timer">60</div></div>
+    </div>
+    <div id="mode-badge" style="font-size:.75rem;color:var(--muted);border:1px solid var(--border);padding:4px 10px;border-radius:20px"></div>
+  </div>
+  <canvas id="gameCanvas" width="600" height="600"></canvas>
+  <div class="shrink-warn" id="shrink-warn"></div>
+  <div class="powerup-hud" id="powerup-hud"></div>
+  <div class="controls-hint">Arrow keys / WASD · Collect ⚡🛡️✨ power-ups on the board!</div>
+  <div class="mobile-dpad">
+    <div class="dpad-row"><div class="dpad-btn" onclick="dpadPress('UP')">▲</div></div>
+    <div class="dpad-row">
+      <div class="dpad-btn" onclick="dpadPress('LEFT')">◀</div>
+      <div class="dpad-btn" onclick="dpadPress('DOWN')">▼</div>
+      <div class="dpad-btn" onclick="dpadPress('RIGHT')">▶</div>
+    </div>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="gameover-overlay">
+  <div class="gameover-card">
+    <h2 id="go-title">💀 Game Over</h2>
+    <div class="gameover-score">Score: <strong id="go-score">0</strong></div>
+    <div style="color:var(--muted);font-size:.9rem" id="go-best-line"></div>
+    <div class="gameover-actions">
+      <button class="btn-primary" onclick="restartGame()">▶ Play Again</button>
+      <button class="btn-ghost" onclick="exitToMenu()">🏠 Menu</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ───────────────────────────────────────────────────────────────────
+const JSONBIN_BIN_ID  = '6a081f30c0954111d82fa06b';
+const JSONBIN_API_KEY = '$2a$10$tKWZk39NJBHW4Bd2cASvpe7P776nubtNRkmZ9o6YeWoqgGq.Rwz5i';
+const JSONBIN_URL     = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+
+// ── SKINS ─────────────────────────────────────────────────────────────────────
+const SKINS = [
+  { id:'classic', label:'🟢', name:'Classic',  unlockAt:0,  head:'#00ff88', body:['#00cc70','#009950','#006635'] },
+  { id:'fire',    label:'🔴', name:'Fire',      unlockAt:10, head:'#ff6600', body:['#ff4400','#cc2200','#991100'] },
+  { id:'ocean',   label:'🔵', name:'Ocean',     unlockAt:20, head:'#00aaff', body:['#0088cc','#006699','#004466'] },
+  { id:'galaxy',  label:'🟣', name:'Galaxy',    unlockAt:35, head:'#cc44ff', body:['#9922dd','#6600aa','#440077'] },
+  { id:'gold',    label:'🟡', name:'Gold',      unlockAt:50, head:'#ffd700', body:['#ccaa00','#997700','#664400'] },
+  { id:'rainbow', label:'🌈', name:'Rainbow',   unlockAt:75, head:'#ff0088', body:['#ff8800','#00ff44','#0088ff'] },
+];
+
+const POWERUP_TYPES = [
+  { id:'speed',  label:'⚡', color:'#ffaa00', dur:5000, desc:'Speed Boost' },
+  { id:'shield', label:'🛡️', color:'#00aaff', dur:6000, desc:'Shield' },
+  { id:'multi',  label:'✨', color:'#ff44ff', dur:8000, desc:'2× Score' },
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let currentUser  = null;
+let authMode     = 'signin';
+let selectedMode = 'classic';
+let selectedSkin = 'classic';
+let userBest     = 0;
+
+// ── DB ────────────────────────────────────────────────────────────────────────
+async function dbRead() {
+  const r = await fetch(JSONBIN_URL + '/latest', { headers:{ 'X-Master-Key': JSONBIN_API_KEY } });
+  if (!r.ok) throw new Error('DB read failed');
+  return (await r.json()).record;
+}
+async function dbWrite(data) {
+  const r = await fetch(JSONBIN_URL, {
+    method:'PUT',
+    headers:{ 'Content-Type':'application/json', 'X-Master-Key': JSONBIN_API_KEY },
+    body: JSON.stringify(data)
+  });
+  if (!r.ok) throw new Error('DB write failed');
+  return r.json();
+}
+async function hashPw(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw + 'snakoi_salt'));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function toggleAuthMode() {
+  authMode = authMode === 'signin' ? 'register' : 'signin';
+  document.getElementById('auth-title').textContent      = authMode === 'signin' ? 'Sign In' : 'Create Account';
+  document.getElementById('auth-submit-btn').textContent = authMode === 'signin' ? 'Sign In' : 'Register';
+  document.getElementById('auth-toggle').innerHTML = authMode === 'signin'
+    ? 'No account? <span onclick="toggleAuthMode()">Create one</span>'
+    : 'Already have one? <span onclick="toggleAuthMode()">Sign in</span>';
+  document.getElementById('auth-error').textContent = '';
+}
+
+async function authSubmit() {
+  const username = document.getElementById('auth-username').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl    = document.getElementById('auth-error');
+  const btn      = document.getElementById('auth-submit-btn');
+  errEl.textContent = '';
+  if (!username || !password) { errEl.textContent = 'Please fill in all fields.'; return; }
+  if (username.length < 2)    { errEl.textContent = 'Username must be 2+ chars.'; return; }
+  btn.innerHTML = '<span class="spinner"></span>Loading…'; btn.disabled = true;
+  try {
+    const db   = await dbRead();
+    const hash = await hashPw(password);
+    if (authMode === 'register') {
+      if (db.users[username]) { errEl.textContent = 'Username taken.'; return; }
+      db.users[username] = { hash, best:0, skin:'classic' };
+      await dbWrite(db);
+      toast('Account created! 🎉', 'success');
+    } else {
+      const user = db.users[username];
+      if (!user || user.hash !== hash) { errEl.textContent = 'Invalid username or password.'; return; }
+    }
+    currentUser = username;
+    localStorage.setItem('snakoi_user', username);
+    localStorage.setItem('snakoi_hash', hash);
+    showMenu();
+  } catch(e) {
+    errEl.textContent = 'Connection error. Check your JSONBin config.';
+  } finally {
+    btn.innerHTML = authMode === 'signin' ? 'Sign In' : 'Register'; btn.disabled = false;
+  }
+}
+
+async function autoLogin() {
+  const savedUser = localStorage.getItem('snakoi_user');
+  const savedHash = localStorage.getItem('snakoi_hash');
+  if (!savedUser || !savedHash) return false;
+  try {
+    const db   = await dbRead();
+    const user = db.users[savedUser];
+    if (user && user.hash === savedHash) { currentUser = savedUser; return true; }
+  } catch(e) {}
+  localStorage.removeItem('snakoi_user');
+  localStorage.removeItem('snakoi_hash');
+  return false;
+}
+
+function logout() {
+  currentUser = null;
+  localStorage.removeItem('snakoi_user');
+  localStorage.removeItem('snakoi_hash');
+  showAuth();
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showAuth() { showScreen('auth-screen'); }
+function showMenu() { showScreen('menu-screen'); loadMenuData(); }
+function showGame() { showScreen('game-screen'); }
+
+async function loadMenuData() {
+  try {
+    const db   = await dbRead();
+    const user = db.users[currentUser] || {};
+    userBest     = user.best || 0;
+    selectedSkin = user.skin || 'classic';
+    document.getElementById('menu-username').textContent = currentUser;
+    document.getElementById('menu-best').textContent     = userBest;
+    document.getElementById('hud-best').textContent      = userBest;
+    renderSkinSelector(userBest);
+    renderLeaderboard(db);
+  } catch(e) { console.error(e); }
+}
+
+// ── MODE SELECTOR ─────────────────────────────────────────────────────────────
+function selectMode(mode) {
+  selectedMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('mode-' + mode).classList.add('selected');
+}
+
+// ── SKIN SELECTOR ─────────────────────────────────────────────────────────────
+function renderSkinSelector(best) {
+  const container = document.getElementById('skin-selector');
+  container.innerHTML = '';
+  SKINS.forEach(skin => {
+    const unlocked = best >= skin.unlockAt;
+    const btn = document.createElement('div');
+    btn.className = 'skin-btn' + (skin.id === selectedSkin ? ' selected' : '') + (unlocked ? '' : ' locked');
+    btn.title     = unlocked ? skin.name : `${skin.name} — unlock at score ${skin.unlockAt}`;
+    btn.innerHTML = skin.label + (unlocked ? '' : '<span class="lock-icon">🔒</span>');
+    if (unlocked) btn.onclick = () => {
+      selectedSkin = skin.id;
+      document.querySelectorAll('.skin-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    };
+    container.appendChild(btn);
+  });
+  const next = SKINS.find(s => best < s.unlockAt);
+  document.getElementById('skin-hint').textContent = next
+    ? `Next unlock: ${next.name} at ${next.unlockAt} pts`
+    : '🎉 All skins unlocked!';
+}
+
+async function loadLeaderboard() {
+  document.getElementById('leaderboard-container').innerHTML =
+    '<div style="text-align:center;color:var(--muted);padding:14px"><span class="spinner"></span>Loading...</div>';
+  try { renderLeaderboard(await dbRead()); }
+  catch(e) {
+    document.getElementById('leaderboard-container').innerHTML =
+      '<div style="color:var(--danger);text-align:center;padding:14px">Failed to load</div>';
+  }
+}
+
+function renderLeaderboard(db) {
+  const entries = Object.entries(db.users || {})
+    .map(([name,data]) => ({ name, best:data.best||0 }))
+    .sort((a,b) => b.best - a.best).slice(0,10);
+  if (!entries.length) {
+    document.getElementById('leaderboard-container').innerHTML =
+      '<div style="color:var(--muted);text-align:center;padding:14px">No scores yet!</div>';
+    return;
+  }
+  const medals = ['🥇','🥈','🥉'];
+  let html = '<table class="leaderboard-table"><thead><tr><th>#</th><th>Player</th><th>Best</th></tr></thead><tbody>';
+  entries.forEach((e,i) => {
+    const cls = e.name === currentUser ? 'me' : '';
+    html += `<tr><td>${medals[i]||i+1}</td><td class="${cls}">${escHtml(e.name)}</td><td>${e.best}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('leaderboard-container').innerHTML = html;
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── GAME ENGINE ───────────────────────────────────────────────────────────────
+const COLS = 20, ROWS = 20;
+let canvas, ctx, CELL;
+let snake, dir, nextDir, food, powerupItems, particles;
+let score, localBest, gameLoop, timerInterval;
+let gameRunning  = false;
+let activePowerups = {};
+let tickInterval = 120;
+let shrinkLevel  = 0;
+let timeLeft     = 60;
+let currentMode  = 'classic';
+let currentSkinObj = SKINS[0];
+let shrinkTimeout = null;
+
+function getSkinById(id) { return SKINS.find(s => s.id === id) || SKINS[0]; }
+
+function startGame() {
+  currentMode    = selectedMode;
+  currentSkinObj = getSkinById(selectedSkin);
+  showGame();
+  canvas = document.getElementById('gameCanvas');
+  const size = Math.min(window.innerWidth - 32, 600);
+  canvas.width = canvas.height = size;
+  CELL = size / COLS;
+  ctx  = canvas.getContext('2d');
+  document.getElementById('mode-badge').textContent = {
+    classic:'🐍 Classic', wraparound:'🌀 No Walls',
+    timeattack:'⏱️ Time Attack', shrinking:'📦 Shrinking'
+  }[currentMode];
+  document.getElementById('hud-timer-box').style.display = currentMode === 'timeattack' ? '' : 'none';
+  initGame();
+}
+
+function initGame() {
+  snake          = [{ x:10,y:10 },{ x:9,y:10 },{ x:8,y:10 }];
+  dir            = { x:1, y:0 };
+  nextDir        = { x:1, y:0 };
+  score          = 0;
+  shrinkLevel    = 0;
+  timeLeft       = 60;
+  tickInterval   = 120;
+  gameRunning    = true;
+  activePowerups = {};
+  powerupItems   = [];
+  particles      = [];
+  localBest      = parseInt(document.getElementById('hud-best').textContent) || 0;
+
+  document.getElementById('gameover-overlay').classList.remove('active');
+  document.getElementById('shrink-warn').textContent = '';
+  document.getElementById('shrink-warn').classList.remove('active');
+
+  placeFood();
+  updateHUD();
+  renderPowerupHUD();
+
+  clearInterval(gameLoop);
+  clearInterval(timerInterval);
+  clearTimeout(shrinkTimeout);
+
+  gameLoop = setInterval(tick, tickInterval);
+
+  if (currentMode === 'timeattack') {
+    document.getElementById('hud-timer').textContent = 60;
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      document.getElementById('hud-timer').textContent = timeLeft;
+      if (timeLeft <= 10) document.getElementById('hud-timer-box').style.borderColor = 'var(--danger)';
+      if (timeLeft <= 0) { clearInterval(timerInterval); endGame(true); }
+    }, 1000);
+  }
+
+  if (currentMode === 'shrinking') scheduleShrink();
+}
+
+function scheduleShrink() {
+  shrinkTimeout = setTimeout(() => {
+    if (!gameRunning) return;
+    shrinkLevel++;
+    const warn = document.getElementById('shrink-warn');
+    warn.textContent = `⚠️ Arena shrinking! (level ${shrinkLevel})`;
+    warn.classList.add('active');
+    setTimeout(() => { warn.classList.remove('active'); warn.textContent = ''; }, 2500);
+    // Kill snake if out of new bounds
+    const min = shrinkLevel, max = COLS - 1 - shrinkLevel;
+    if (snake[0].x < min || snake[0].x > max || snake[0].y < min || snake[0].y > max) {
+      endGame(); return;
+    }
+    if (shrinkLevel < 8) scheduleShrink();
+  }, 10000);
+}
+
+function placeFood() {
+  const min = shrinkLevel, max = COLS - 1 - shrinkLevel;
+  let pos, tries = 0;
+  do {
+    pos = { x: min + Math.floor(Math.random()*(max-min+1)), y: min + Math.floor(Math.random()*(max-min+1)) };
+    tries++;
+  } while (tries < 30 && snake.some(s => s.x===pos.x && s.y===pos.y));
+  food = pos;
+}
+
+function maybePlacePowerup() {
+  if (powerupItems.length >= 2 || Math.random() > 0.28) return;
+  const min = shrinkLevel, max = COLS - 1 - shrinkLevel;
+  const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+  let pos, tries = 0;
+  do {
+    pos = { x: min + Math.floor(Math.random()*(max-min+1)), y: min + Math.floor(Math.random()*(max-min+1)) };
+    tries++;
+  } while (tries < 20 && (
+    snake.some(s=>s.x===pos.x&&s.y===pos.y) ||
+    (food.x===pos.x&&food.y===pos.y) ||
+    powerupItems.some(p=>p.x===pos.x&&p.y===pos.y)
+  ));
+  powerupItems.push({ ...type, x:pos.x, y:pos.y, spawnedAt:Date.now() });
+}
+
+function tick() {
+  if (!gameRunning) return;
+
+  const now = Date.now();
+
+  // Expire power-ups
+  for (const key of Object.keys(activePowerups)) {
+    if (now > activePowerups[key].expiresAt) delete activePowerups[key];
+  }
+
+  // Expire old power-up items (15s)
+  powerupItems = powerupItems.filter(p => now - p.spawnedAt < 15000);
+
+  // Speed power-up: dynamically change interval
+  const wantInterval = activePowerups.speed ? 65 : 120;
+  if (tickInterval !== wantInterval) {
+    tickInterval = wantInterval;
+    clearInterval(gameLoop);
+    gameLoop = setInterval(tick, tickInterval);
+    return;
+  }
+
+  dir = { ...nextDir };
+  const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+  // Wall handling
+  if (currentMode === 'wraparound') {
+    head.x = ((head.x % COLS) + COLS) % COLS;
+    head.y = ((head.y % ROWS) + ROWS) % ROWS;
+  } else {
+    const min = currentMode === 'shrinking' ? shrinkLevel : 0;
+    const max = currentMode === 'shrinking' ? COLS-1-shrinkLevel : COLS-1;
+    if (head.x < min || head.x > max || head.y < min || head.y > max) {
+      if (activePowerups.shield) {
+        delete activePowerups.shield;
+        toast('🛡️ Shield absorbed a wall hit!', 'info');
+        renderPowerupHUD();
+        return;
+      }
+      endGame(); return;
+    }
+  }
+
+  // Self collision
+  if (snake.some(s => s.x===head.x && s.y===head.y)) {
+    if (activePowerups.shield) {
+      delete activePowerups.shield;
+      toast('🛡️ Shield absorbed a self hit!', 'info');
+      renderPowerupHUD();
+      return;
+    }
+    endGame(); return;
+  }
+
+  snake.unshift(head);
+
+  // Eat food
+  if (head.x===food.x && head.y===food.y) {
+    const pts = activePowerups.multi ? 2 : 1;
+    score += pts;
+    updateHUD();
+    spawnParticles(food.x, food.y, activePowerups.multi ? '#ff44ff' : currentSkinObj.head, 14);
+    placeFood();
+    maybePlacePowerup();
+  } else {
+    snake.pop();
+  }
+
+  // Collect power-up
+  const pwIdx = powerupItems.findIndex(p => p.x===head.x && p.y===head.y);
+  if (pwIdx !== -1) {
+    const pw = powerupItems.splice(pwIdx, 1)[0];
+    activePowerups[pw.id] = { expiresAt: now + pw.dur, dur: pw.dur };
+    toast(`${pw.label} ${pw.desc} activated!`, 'info');
+    spawnParticles(head.x, head.y, pw.color, 20);
+    renderPowerupHUD();
+  }
+
+  renderPowerupHUD();
+  draw();
+}
+
+// ── PARTICLES ─────────────────────────────────────────────────────────────────
+function spawnParticles(gx, gy, color, count = 12) {
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+    const spd   = 1.5 + Math.random() * 2.5;
+    particles.push({
+      x: (gx + .5) * CELL, y: (gy + .5) * CELL,
+      vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd,
+      alpha: 1, size: 2.5 + Math.random() * 3, color,
+    });
+  }
+}
+
+function updateParticles() {
+  particles = particles.filter(p => p.alpha > 0.02);
+  for (const p of particles) {
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= .90; p.vy *= .90;
+    p.alpha *= .87;
+  }
+}
+
+// ── DRAW ──────────────────────────────────────────────────────────────────────
+function draw() {
+  ctx.fillStyle = '#080810';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Shrink zone tinting
+  if (currentMode === 'shrinking' && shrinkLevel > 0) {
+    const pad  = shrinkLevel * CELL;
+    const inner = canvas.width - pad * 2;
+    ctx.fillStyle = 'rgba(255,68,68,0.05)';
+    ctx.fillRect(0,0,canvas.width,pad);
+    ctx.fillRect(0,canvas.height-pad,canvas.width,pad);
+    ctx.fillRect(0,pad,pad,inner);
+    ctx.fillRect(canvas.width-pad,pad,pad,inner);
+    ctx.strokeStyle = 'rgba(255,68,68,0.4)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(pad,pad,inner,inner);
+  }
+
+  // Grid
+  ctx.strokeStyle = '#0f0f1e'; ctx.lineWidth = .5;
+  const gMin = currentMode === 'shrinking' ? shrinkLevel : 0;
+  const gMax = currentMode === 'shrinking' ? COLS - shrinkLevel : COLS;
+  for (let i = gMin; i <= gMax; i++) {
+    ctx.beginPath(); ctx.moveTo(i*CELL,gMin*CELL); ctx.lineTo(i*CELL,gMax*CELL); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(gMin*CELL,i*CELL); ctx.lineTo(gMax*CELL,i*CELL); ctx.stroke();
+  }
+
+  // Food
+  ctx.fillStyle = 'rgba(255,68,68,0.22)';
+  ctx.beginPath(); ctx.arc((food.x+.5)*CELL,(food.y+.5)*CELL,CELL*.75,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ff4444';
+  ctx.beginPath(); ctx.roundRect(food.x*CELL+2,food.y*CELL+2,CELL-4,CELL-4,4); ctx.fill();
+  ctx.fillStyle = '#884422'; ctx.fillRect((food.x+.5)*CELL-1,food.y*CELL,2,4);
+
+  // Power-up items
+  const now = Date.now();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  powerupItems.forEach(pw => {
+    const age = (now - pw.spawnedAt) / 15000;
+    ctx.globalAlpha = age > .7 ? 0.35 + 0.35 * Math.sin(now / 100) : 1;
+    ctx.fillStyle = pw.color + '30';
+    ctx.beginPath(); ctx.arc((pw.x+.5)*CELL,(pw.y+.5)*CELL,CELL*.78,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha = ctx.globalAlpha;
+    ctx.font = `${CELL*.65}px serif`;
+    ctx.fillText(pw.label, (pw.x+.5)*CELL, (pw.y+.5)*CELL);
+    ctx.globalAlpha = 1;
+  });
+
+  // Snake
+  const hasShield = !!activePowerups.shield;
+  snake.forEach((seg, i) => {
+    if (i === 0) {
+      ctx.fillStyle  = currentSkinObj.head;
+      ctx.shadowColor = hasShield ? '#00aaff' : currentSkinObj.head;
+      ctx.shadowBlur  = hasShield ? 16 : 9;
+    } else {
+      // Rainbow skin cycles body colors
+      if (currentSkinObj.id === 'rainbow') {
+        const hue = (i * 30) % 360;
+        ctx.fillStyle = `hsl(${hue},100%,55%)`;
+      } else {
+        ctx.fillStyle = currentSkinObj.body[Math.min(i-1, currentSkinObj.body.length-1)];
+      }
+      ctx.shadowBlur = 0;
+    }
+    const pad = i === 0 ? 1 : 2;
+    ctx.beginPath();
+    ctx.roundRect(seg.x*CELL+pad, seg.y*CELL+pad, CELL-pad*2, CELL-pad*2, i===0?6:4);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+
+  // Eyes on head
+  const h = snake[0];
+  ctx.fillStyle = '#000';
+  const ex = dir.x===0?[.3,.7]:(dir.x>0?[.7,.7]:[.3,.3]);
+  const ey = dir.y===0?[.3,.7]:(dir.y>0?[.7,.7]:[.3,.3]);
+  ctx.beginPath(); ctx.arc((h.x+ex[0])*CELL,(h.y+ey[0])*CELL,2.5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc((h.x+ex[1])*CELL,(h.y+ey[1])*CELL,2.5,0,Math.PI*2); ctx.fill();
+
+  // Particles
+  updateParticles();
+  particles.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = p.alpha;
+    ctx.fillStyle   = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+}
+
+// ── POWER-UP HUD ──────────────────────────────────────────────────────────────
+function renderPowerupHUD() {
+  const hud = document.getElementById('powerup-hud');
+  hud.innerHTML = '';
+  const now = Date.now();
+  POWERUP_TYPES.forEach(pw => {
+    const active = activePowerups[pw.id];
+    if (!active) return;
+    const pct = Math.max(0, (active.expiresAt - now) / pw.dur * 100);
+    const pill = document.createElement('div');
+    pill.className = `pw-pill ${pw.id}`;
+    pill.innerHTML = `${pw.label} ${pw.desc} <div class="pw-bar"><div class="pw-bar-fill" style="width:${pct}%"></div></div>`;
+    hud.appendChild(pill);
+  });
+}
+
+// ── HUD ───────────────────────────────────────────────────────────────────────
+function updateHUD() {
+  document.getElementById('hud-score').textContent = score;
+  if (score > localBest) {
+    localBest = score;
+    document.getElementById('hud-best').textContent = localBest;
+  }
+}
+
+// ── END GAME ──────────────────────────────────────────────────────────────────
+async function endGame(timeUp = false) {
+  gameRunning = false;
+  clearInterval(gameLoop);
+  clearInterval(timerInterval);
+  clearTimeout(shrinkTimeout);
+  document.getElementById('go-title').textContent    = timeUp ? "⏱️ Time's Up!" : '💀 Game Over';
+  document.getElementById('go-score').textContent    = score;
+  document.getElementById('go-best-line').textContent = score > userBest ? '🎉 New personal best!' : `Personal best: ${localBest}`;
+  document.getElementById('gameover-overlay').classList.add('active');
+  if (score > 0) {
+    try {
+      const db   = await dbRead();
+      const user = db.users[currentUser] || { hash:'', best:0, skin:'classic' };
+      if (score > (user.best || 0)) {
+        user.best = score; user.skin = selectedSkin;
+        db.users[currentUser] = user;
+        userBest = score;
+        await dbWrite(db);
+        toast('New best saved! 🎉', 'success');
+        document.getElementById('menu-best').textContent = score;
+        document.getElementById('hud-best').textContent  = score;
+        localBest = score;
+      }
+    } catch(e) { console.error(e); }
+  }
+}
+
+function restartGame() {
+  document.getElementById('gameover-overlay').classList.remove('active');
+  initGame();
+}
+function exitToMenu() {
+  gameRunning = false;
+  clearInterval(gameLoop);
+  clearInterval(timerInterval);
+  clearTimeout(shrinkTimeout);
+  document.getElementById('gameover-overlay').classList.remove('active');
+  showMenu();
+}
+
+// ── CONTROLS ─────────────────────────────────────────────────────────────────
+const KEY_MAP = {
+  ArrowUp:'UP', ArrowDown:'DOWN', ArrowLeft:'LEFT', ArrowRight:'RIGHT',
+  w:'UP', s:'DOWN', a:'LEFT', d:'RIGHT',
+  W:'UP', S:'DOWN', A:'LEFT', D:'RIGHT',
+};
+document.addEventListener('keydown', e => {
+  const action = KEY_MAP[e.key];
+  if (!action) return;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+  if (!gameRunning) return;
+  applyDir(action);
+});
+function dpadPress(a) { if (gameRunning) applyDir(a); }
+function applyDir(a) {
+  if (a==='UP'    && dir.y!== 1) nextDir = { x:0, y:-1 };
+  if (a==='DOWN'  && dir.y!==-1) nextDir = { x:0, y: 1 };
+  if (a==='LEFT'  && dir.x!== 1) nextDir = { x:-1, y:0 };
+  if (a==='RIGHT' && dir.x!==-1) nextDir = { x: 1, y:0 };
+}
+let touchX, touchY;
+document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; }, { passive:true });
+document.addEventListener('touchend', e => {
+  if (!gameRunning) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  const dy = e.changedTouches[0].clientY - touchY;
+  if (Math.abs(dx) > Math.abs(dy)) applyDir(dx > 0 ? 'RIGHT' : 'LEFT');
+  else applyDir(dy > 0 ? 'DOWN' : 'UP');
+}, { passive:true });
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 2800);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init() {
+  showScreen('auth-screen');
+  document.getElementById('auth-error').textContent = 'Checking session…';
+  const ok = await autoLogin();
+  document.getElementById('auth-error').textContent = '';
+  if (ok) showMenu();
+}
+init();
+</script>
+</body>
+</html>
+
+
